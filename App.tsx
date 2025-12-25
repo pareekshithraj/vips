@@ -338,12 +338,16 @@ const OnboardingView: React.FC<{
   currentSyllabus: Syllabus;
   onComplete: () => void;
   onAddCustomSubject: (name: string) => void;
-}> = ({ userConfig, setUserConfig, onboardingStep, setOnboardingStep, currentSyllabus, onComplete, onAddCustomSubject }) => {
+  onLogout: () => void;
+}> = ({ userConfig, setUserConfig, onboardingStep, setOnboardingStep, currentSyllabus, onComplete, onAddCustomSubject, onLogout }) => {
   const [newSubName, setNewSubName] = useState('');
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
-      <div className="w-full max-w-xl bg-white rounded-[2.5rem] shadow-2xl p-8 md:p-12 space-y-8 animate-in slide-in-from-bottom-4">
+      <div className="w-full max-w-xl bg-white rounded-[2.5rem] shadow-2xl p-8 md:p-12 space-y-8 animate-in slide-in-from-bottom-4 relative">
+        <button onClick={onLogout} className="absolute top-8 right-8 text-slate-400 hover:text-red-500 text-xs font-bold uppercase tracking-widest transition-colors">
+          Logout
+        </button>
         <div className="flex justify-between items-center mb-2">
           <h3 className="text-lg font-black text-indigo-900">Step {onboardingStep} of 4</h3>
           <div className="flex gap-1.5">
@@ -664,6 +668,7 @@ const App: React.FC = () => {
           setOnboardingStep={setOnboardingStep}
           currentSyllabus={currentSyllabus}
           onAddCustomSubject={addCustomSubject}
+          onLogout={handleLogout}
           onComplete={() => { setUserConfig({ ...userConfig, onboarded: true }); setView('dashboard'); }}
         />
       )}
