@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import {
   CheckCircle, BookOpen, Clock, Layers, Zap, Target,
   Layout, ChevronLeft, Menu, X, AlertCircle,
@@ -716,6 +717,7 @@ const App: React.FC = () => {
       )}
 
       {view === 'admin-dashboard' && <AdminDashboard setView={setView} />}
+      <Analytics />
     </div>
   );
 };
