@@ -2,13 +2,14 @@
 import React from 'react';
 import { Trophy, Medal, User } from 'lucide-react';
 import { gamificationService } from '../services/gamification';
+import { UserConfig } from '../types';
 
-export const Leaderboard: React.FC = () => {
+export const Leaderboard: React.FC<{ currentUser: UserConfig }> = ({ currentUser }) => {
     const [data, setData] = React.useState<any[]>([]);
 
     React.useEffect(() => {
         gamificationService.getLeaderboard().then(setData).catch(err => console.error(err));
-    }, []);
+    }, [currentUser.gamification?.points]);
 
     return (
         <div className="bg-white p-6 rounded-2xl border shadow-sm space-y-4">

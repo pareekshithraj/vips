@@ -69,16 +69,43 @@ export const gamificationService = {
 
     // Call this when a task is marked done
     checkAchievements(config: UserConfig, masteryScore: number, taskCompletedTime: Date): UserConfig {
-        const currentGami = config.gamification || { streak: 0, lastStudyDate: format(new Date(), 'yyyy-MM-dd'), points: 0, unlockedAchievementIds: [] };
-        const unlockedIds = new Set(currentGami.unlockedAchievementIds);
-        let newPoints = currentGami.points + 10; // +10 points per task
+        const currentGami = config.gamification || { streak: 0, lastStudyDate: '', points: 0, unlockedAchievementIds: [] };
 
-        // Check Streak conditions (in case streak updated)
+        const today = new Date();
+        const lastDateStr = currentGami.lastStudyDate;
+        const lastDate = lastDateStr ? new Date(lastDateStr) : null;
+
+        let newStreak = currentGami.streak;
+
+        // Streak Logic
+        if (!lastDate) {
+            // First ever task
+            newStreak = 1;
+        } else {
+            const diff = differenceInCalendarDays(today, lastDate);
+            if (diff === 1) {
+                // Consecutive day
+                newStreak += 1;
+            } else if (diff > 1) {
+                // Broken streak
+                newStreak = 1;
+            }
+            // If diff === 0, same day, keep streak as is
+        }
+
+        // Points Logic
+        // Base 10 + Streak Bonus (5 * streak)
+        const pointsToAdd = 10 + (newStreak * 5);
+        const newPoints = currentGami.points + pointsToAdd;
+
+        const unlockedIds = new Set(currentGami.unlockedAchievementIds);
+
+        // Check Streak Achievements
         ACHIEVEMENTS.filter(a => a.conditionType === 'streak').forEach(a => {
-            if (currentGami.streak >= a.threshold) unlockedIds.add(a.id);
+            if (newStreak >= a.threshold) unlockedIds.add(a.id);
         });
 
-        // Check Mastery
+        // Check Mastery Achievements
         ACHIEVEMENTS.filter(a => a.conditionType === 'mastery').forEach(a => {
             if (masteryScore >= a.threshold) unlockedIds.add(a.id);
         });
@@ -88,7 +115,7 @@ export const gamificationService = {
         if (hour < 8) unlockedIds.add('early_bird');
         if (hour >= 21) unlockedIds.add('night_owl');
 
-        // Check First Step (Task Count > 0, which is true if this runs)
+        // Check First Step
         unlockedIds.add('first_step');
 
         return {
@@ -96,7 +123,9 @@ export const gamificationService = {
             gamification: {
                 ...currentGami,
                 points: newPoints,
-                unlockedAchievementIds: Array.from(unlockedIds)
+                unlockedAchievementIds: Array.from(unlockedIds),
+                streak: newStreak,
+                lastStudyDate: format(today, 'yyyy-MM-dd')
             }
         };
     },

@@ -95,7 +95,12 @@ export interface UserConfig {
   completedTopicIds: string[];
   dailyRoutine?: DailyRoutine;
   onboarded: boolean;
-  gamification: UserGamification;
+  isSchoolStudent?: boolean; // Flag for School Portal Access
+  gamification?: UserGamification;
+  careerPath?: {
+    recommended: string;
+    timestamp: string;
+  };
 }
 
 export interface Achievement {
@@ -114,3 +119,82 @@ export interface UserGamification {
   unlockedAchievementIds: string[];
 }
 
+// --- LMS Types ---
+
+export interface Material {
+  id: string;
+  title: string;
+  description?: string;
+  type: 'PDF' | 'Link' | 'Video';
+  url: string;
+  classLevel: string; // e.g. "10" (Matches userConfig.classLevel)
+  subjectId: string; // Matches Subject.id
+  uploadedAt: string;
+}
+
+export interface Assignment {
+  id: string;
+  title: string;
+  description: string;
+  classLevel: string;
+  subjectId: string;
+  dueDate: string;
+  totalPoints: number;
+  createdAt: string;
+}
+
+export interface AssignmentSubmission {
+  assignmentId: string;
+  studentId: string;
+  studentName: string;
+  submissionUrl?: string; // Link to uploaded file
+  submittedAt: string;
+  grade?: number;
+  feedback?: string;
+}
+
+export interface QuizQuestion {
+  id: string;
+  text: string;
+  options: string[];
+  correctOptionIndex: number;
+}
+
+export interface Quiz {
+  id: string;
+  title: string;
+  classLevel: string;
+  subjectId: string;
+  questions: QuizQuestion[];
+  durationMinutes: number;
+  createdAt: string;
+}
+
+export interface QuizResult {
+  quizId: string;
+  studentId: string;
+  score: number;
+  totalQuestions: number;
+  attemptedAt: string;
+}
+
+export interface InventoryItem {
+  id: string;
+  name: string;
+  category: string;
+  quantity: number;
+  unit: string;
+  lowStockThreshold: number;
+  lastRestocked: string;
+  assigned?: number; // Track distributed items
+}
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  start: string;
+  end?: string;
+  allDay?: boolean;
+  type: 'Holiday' | 'Exam' | 'Event';
+  description?: string;
+}

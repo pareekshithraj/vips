@@ -2,8 +2,9 @@ import React from 'react';
 import {
     BookOpen, Users, Trophy, Calendar, MapPin, Phone, Mail,
     Clock, CheckCircle, ArrowRight, GraduationCap, Star, Heart,
-    Globe, Shield, Award
+    Globe, Shield, Award, Send
 } from 'lucide-react';
+import { managementService } from '../services/management';
 
 interface PageProps {
     setView: (view: any) => void;
@@ -121,45 +122,98 @@ export const BeyondClassroomView: React.FC<PageProps> = ({ setView }) => (
     </div>
 );
 
-export const AdmissionsView: React.FC<PageProps> = ({ setView }) => (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-        <div className="bg-indigo-900 text-white py-20 px-6 text-center rounded-b-[3rem] mb-12">
-            <h1 className="text-4xl md:text-6xl font-black mb-6">Join Our Family</h1>
-            <p className="text-indigo-100 text-lg max-w-2xl mx-auto">
-                Admissions open for the Academic Year 2025-26.
-            </p>
-        </div>
+export const AdmissionsView: React.FC<PageProps> = ({ setView }) => {
+    const [form, setForm] = React.useState({ studentName: '', parentName: '', grade: '1', phone: '', email: '', message: '' });
+    const [loading, setLoading] = React.useState(false);
+    const [submitted, setSubmitted] = React.useState(false);
 
-        <div className="max-w-4xl mx-auto px-6 pb-20 space-y-12">
-            <div className="bg-white p-10 rounded-[2.5rem] shadow-xl border border-slate-100">
-                <h2 className="text-2xl font-black text-indigo-950 mb-8 text-center">Admission Process</h2>
-                <div className="space-y-8">
-                    {[
-                        { step: 1, title: "Online Registration", desc: "Fill out the enquiry form or register on our portal." },
-                        { step: 2, title: "Campus Visit & Interaction", desc: "Meet our counselors and tour the campus." },
-                        { step: 3, title: "Assessment", desc: "Basic aptitude test for Grade 1 onwards." },
-                        { step: 4, title: "Document Submission", desc: "Submit previous records and birth certificate." }
-                    ].map((s, i) => (
-                        <div key={i} className="flex gap-6">
-                            <div className="flex flex-col items-center">
-                                <div className="w-10 h-10 rounded-full bg-indigo-900 text-white flex items-center justify-center font-black text-sm z-10">
-                                    {s.step}
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+            await managementService.submitAdmissionRequest(form as any);
+            setSubmitted(true);
+        } catch (e) {
+            console.error(e);
+            alert("Failed to submit request. Please try again or contact us directly.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="bg-indigo-900 text-white py-20 px-6 text-center rounded-b-[3rem] mb-12">
+                <h1 className="text-4xl md:text-6xl font-black mb-6">Join Our Family</h1>
+                <p className="text-indigo-100 text-lg max-w-2xl mx-auto">
+                    Admissions open for the Academic Year 2025-26.
+                </p>
+            </div>
+
+            <div className="max-w-6xl mx-auto px-6 pb-20 grid grid-cols-1 lg:grid-cols-2 gap-12">
+                {/* Process Steps */}
+                <div className="bg-white p-10 rounded-[2.5rem] shadow-xl border border-slate-100 h-fit">
+                    <h2 className="text-2xl font-black text-indigo-950 mb-8 text-center">Admission Process</h2>
+                    <div className="space-y-8">
+                        {[
+                            { step: 1, title: "Online Registration", desc: "Fill out the enquiry form or register on our portal." },
+                            { step: 2, title: "Campus Visit & Interaction", desc: "Meet our counselors and tour the campus." },
+                            { step: 3, title: "Assessment", desc: "Basic aptitude test for Grade 1 onwards." },
+                            { step: 4, title: "Document Submission", desc: "Submit previous records and birth certificate." }
+                        ].map((s, i) => (
+                            <div key={i} className="flex gap-6">
+                                <div className="flex flex-col items-center">
+                                    <div className="w-10 h-10 rounded-full bg-indigo-900 text-white flex items-center justify-center font-black text-sm z-10">
+                                        {s.step}
+                                    </div>
+                                    {i < 3 && <div className="w-0.5 h-full bg-indigo-100 -my-2"></div>}
                                 </div>
-                                {i < 3 && <div className="w-0.5 h-full bg-indigo-100 -my-2"></div>}
+                                <div className="pb-8">
+                                    <h3 className="text-lg font-black text-indigo-950">{s.title}</h3>
+                                    <p className="text-slate-500 text-sm">{s.desc}</p>
+                                </div>
                             </div>
-                            <div className="pb-8">
-                                <h3 className="text-lg font-black text-indigo-950">{s.title}</h3>
-                                <p className="text-slate-500 text-sm">{s.desc}</p>
-                            </div>
-                        </div>
-                    ))}
+                        ))}
+                    </div>
                 </div>
-                <div className="mt-8 text-center">
-                    <button onClick={() => setView('register')} className="bg-indigo-600 text-white px-8 py-4 rounded-xl font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg">
-                        Apply Now
-                    </button>
+
+                {/* Enquiry Form */}
+                <div className="bg-indigo-50 p-10 rounded-[2.5rem] border border-indigo-100 h-fit">
+                    <h2 className="text-2xl font-black text-indigo-950 mb-2">Admission Enquiry</h2>
+                    <p className="text-slate-600 mb-8">Fill out the form below and our admissions team will contact you shortly.</p>
+
+                    {submitted ? (
+                        <div className="bg-white p-8 rounded-2xl text-center border border-indigo-100 shadow-sm animate-in zoom-in">
+                            <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <CheckCircle className="w-8 h-8" />
+                            </div>
+                            <h3 className="text-xl font-black text-indigo-950 mb-2">Request Submitted!</h3>
+                            <p className="text-slate-500 mb-6">Thank you for your interest. We will get back to you within 24 hours.</p>
+                            <button onClick={() => setSubmitted(false)} className="text-indigo-600 font-bold text-sm hover:underline">Submit another enquiry</button>
+                        </div>
+                    ) : (
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <input required type="text" placeholder="Student Name" className="w-full p-4 rounded-xl border border-indigo-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none font-bold" value={form.studentName} onChange={e => setForm({ ...form, studentName: e.target.value })} />
+                                <input required type="text" placeholder="Parent Name" className="w-full p-4 rounded-xl border border-indigo-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none font-bold" value={form.parentName} onChange={e => setForm({ ...form, parentName: e.target.value })} />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <select className="w-full p-4 rounded-xl border border-indigo-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none font-bold bg-white" value={form.grade} onChange={e => setForm({ ...form, grade: e.target.value })}>
+                                    <option value="KG">Kindergarten</option>
+                                    {[...Array(12)].map((_, i) => <option key={i} value={i + 1}>Grade {i + 1}</option>)}
+                                </select>
+                                <input required type="tel" placeholder="Phone Number" className="w-full p-4 rounded-xl border border-indigo-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none font-bold" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
+                            </div>
+                            <input required type="email" placeholder="Email Address" className="w-full p-4 rounded-xl border border-indigo-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none font-bold" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+                            <textarea placeholder="Message / Questions (Optional)" className="w-full p-4 rounded-xl border border-indigo-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none font-bold h-32 resize-none" value={form.message} onChange={e => setForm({ ...form, message: e.target.value })}></textarea>
+
+                            <button disabled={loading} className={`w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-lg uppercase tracking-widest shadow-lg shadow-indigo-500/20 transition-all flex items-center justify-center gap-2 ${loading ? 'opacity-70' : ''}`}>
+                                {loading ? 'Sending...' : <>Submit Request <Send className="w-5 h-5" /></>}
+                            </button>
+                        </form>
+                    )}
                 </div>
             </div>
         </div>
-    </div>
-);
+    );
+};

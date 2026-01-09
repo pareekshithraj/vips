@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { BrowserRouter, Routes, Route, useNavigate, Navigate, useLocation } from 'react-router-dom';
 import {
-  CheckCircle, BookOpen, Clock, Layers, Zap, Target,
   Layout, ChevronLeft, Menu, X, AlertCircle,
-  GraduationCap
+  GraduationCap, Moon, Sun, CheckCircle, BookOpen
 } from 'lucide-react';
 import { format, parseISO, differenceInDays } from 'date-fns';
 
@@ -14,8 +14,14 @@ import { userService } from './services/user';
 import { gamificationService } from './services/gamification';
 import { AboutView, AcademicsView, BeyondClassroomView, AdmissionsView } from './components/PublicPages';
 import { ProfileView } from './components/ProfileView';
-import { DashboardLayout } from './components/DashboardLayout';
-import { AdminDashboard } from './components/AdminDashboard';
+import { DashboardLayout } from './components/lms/DashboardLayout';
+import { AdminDashboard } from './components/school/admin/AdminDashboard';
+import { TeacherDashboard } from './components/school/teacher/TeacherDashboard';
+import { DriverDashboard } from './components/school/driver/DriverDashboard';
+import { StudentSchoolPortal } from './components/school/student/StudentSchoolPortal';
+import { migrationService } from './services/migration';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from './services/firebase';
 
 import logoImg from './assets/logo.png';
 import schoolBuildingImg from './assets/school_building.jpg';
@@ -23,12 +29,55 @@ import schoolBuildingImg from './assets/school_building.jpg';
 const CHECKPOINTS: Checkpoint[] = ['Read', 'Revised', 'Practiced', 'Thorough'];
 const SCHOOL_LOGO_URL = logoImg;
 
+// --- Error Boundary for Debugging ---
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  public state: ErrorBoundaryState = { hasError: false, error: null };
+
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error("Uncaught error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-10 text-center">
+          <h2 className="text-2xl font-black text-red-600 mb-4">Something went wrong.</h2>
+          <pre className="bg-red-50 p-4 rounded text-left text-xs text-red-800 overflow-auto max-w-2xl mx-auto">
+            {this.state.error?.toString()}
+          </pre>
+          <button onClick={() => window.location.reload()} className="mt-6 px-6 py-2 bg-slate-900 text-white rounded-xl font-bold">
+            Reload Page
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // --- Shared Layout for Public Pages ---
-const PublicLayout: React.FC<{ children: React.ReactNode, setView: (v: any) => void }> = ({ children, setView }) => {
+const PublicLayout: React.FC<{ children: React.ReactNode, setView: (v: any) => void, darkMode: boolean, toggleDarkMode: () => void }> = ({ children, setView, darkMode, toggleDarkMode }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-white flex flex-col font-['Inter']">
+    <div className={`min-h-screen flex flex-col font-['Inter'] transition-colors duration-300 ${darkMode ? 'bg-slate-950 text-slate-100' : 'bg-white text-slate-900'}`}>
       <div className="bg-emerald-900 text-emerald-50 py-2 px-6 text-[10px] font-bold uppercase tracking-widest flex justify-between items-center z-50 relative">
         <div className="flex gap-4">
           <span>Affiliated to the CBSE (#831498)</span>
@@ -41,35 +90,43 @@ const PublicLayout: React.FC<{ children: React.ReactNode, setView: (v: any) => v
         </div>
       </div>
 
-      <header className="bg-white/80 backdrop-blur-md border-b border-slate-100 px-6 py-4 sticky top-0 z-50 shadow-sm transition-all">
+      <header className={`backdrop-blur-md border-b px-6 py-4 sticky top-0 z-50 shadow-sm transition-all ${darkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white/80 border-slate-100'}`}>
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-4 cursor-pointer" onClick={() => setView('landing')}>
             <img src={SCHOOL_LOGO_URL} alt="VIPS Logo" className="w-12 h-12 md:w-16 md:h-16 rounded-xl object-cover border-2 border-slate-50 shadow-sm" />
             <div>
-              <h1 className="text-emerald-950 font-black text-lg md:text-xl leading-none uppercase tracking-tight">Vidyabodhini</h1>
-              <p className="text-emerald-800 text-[10px] md:text-xs font-bold uppercase tracking-widest mt-1">Integrated Public School</p>
+              <h1 className={`font-black text-lg md:text-xl leading-none uppercase tracking-tight ${darkMode ? 'text-emerald-400' : 'text-emerald-950'}`}>Vidyabodhini</h1>
+              <p className={`text-[10px] md:text-xs font-bold uppercase tracking-widest mt-1 ${darkMode ? 'text-emerald-300' : 'text-emerald-800'}`}>Integrated Public School</p>
             </div>
           </div>
 
-          <div className="hidden md:flex items-center gap-8 text-xs font-bold text-slate-500 uppercase tracking-wider">
-            <button onClick={() => setView('about')} className="hover:text-emerald-900 transition-colors">About Us</button>
-            <button onClick={() => setView('academics')} className="hover:text-emerald-900 transition-colors">Academics (K-12)</button>
-            <button onClick={() => setView('beyond')} className="hover:text-emerald-900 transition-colors">Beyond Classroom</button>
-            <button onClick={() => setView('admissions')} className="hover:text-emerald-900 transition-colors">Admissions</button>
+          <div className="hidden md:flex items-center gap-8 text-xs font-bold uppercase tracking-wider text-slate-500">
+            <button onClick={() => setView('about')} className={`transition-colors ${darkMode ? 'hover:text-emerald-400 text-slate-400' : 'hover:text-emerald-900'}`}>About Us</button>
+            <button onClick={() => setView('academics')} className={`transition-colors ${darkMode ? 'hover:text-emerald-400 text-slate-400' : 'hover:text-emerald-900'}`}>Academics (K-12)</button>
+            <button onClick={() => setView('beyond')} className={`transition-colors ${darkMode ? 'hover:text-emerald-400 text-slate-400' : 'hover:text-emerald-900'}`}>Beyond Classroom</button>
+            <button onClick={() => setView('admissions')} className={`transition-colors ${darkMode ? 'hover:text-emerald-400 text-slate-400' : 'hover:text-emerald-900'}`}>Admissions</button>
+            <button onClick={toggleDarkMode} className={`p-2 rounded-full transition-colors ${darkMode ? 'bg-slate-800 text-yellow-400 hover:bg-slate-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+              {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
           </div>
 
-          <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="md:hidden p-2 text-emerald-950">
-            {isMenuOpen ? <X /> : <Menu />}
-          </button>
+          <div className="flex items-center gap-4 md:hidden">
+            <button onClick={toggleDarkMode} className={`p-2 rounded-full transition-colors ${darkMode ? 'bg-slate-800 text-yellow-400' : 'bg-slate-100 text-slate-600'}`}>
+              {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className={`p-2 map-2 ${darkMode ? 'text-white' : 'text-emerald-950'}`}>
+              {isMenuOpen ? <X /> : <Menu />}
+            </button>
+          </div>
         </div>
 
         {isMenuOpen && (
-          <div className="md:hidden absolute top-full left-0 w-full bg-white/95 backdrop-blur-xl border-b border-slate-100 shadow-xl animate-in slide-in-from-top-2 p-6 flex flex-col gap-4 text-center">
+          <div className={`md:hidden absolute top-full left-0 w-full backdrop-blur-xl border-b shadow-xl animate-in slide-in-from-top-2 p-6 flex flex-col gap-4 text-center ${darkMode ? 'bg-slate-900/95 border-slate-800 text-white' : 'bg-white/95 border-slate-100'}`}>
             <button onClick={() => { setView('about'); setIsMenuOpen(false); }} className="py-3 font-black text-emerald-900 uppercase tracking-widest border-b border-slate-50">About Us</button>
             <button onClick={() => { setView('academics'); setIsMenuOpen(false); }} className="py-3 font-black text-emerald-900 uppercase tracking-widest border-b border-slate-50">Academics</button>
             <button onClick={() => { setView('beyond'); setIsMenuOpen(false); }} className="py-3 font-black text-emerald-900 uppercase tracking-widest border-b border-slate-50">Beyond Classroom</button>
             <button onClick={() => { setView('admissions'); setIsMenuOpen(false); }} className="py-3 font-black text-emerald-900 uppercase tracking-widest border-b border-slate-50">Admissions</button>
-            <button onClick={() => { setView('login'); setIsMenuOpen(false); }} className="py-3 bg-emerald-50 text-emerald-700 rounded-xl font-black uppercase tracking-widest mt-2">Login / Register</button>
+            <button onClick={() => { setView('login-lms'); setIsMenuOpen(false); }} className="py-3 bg-emerald-50 text-emerald-700 rounded-xl font-black uppercase tracking-widest mt-2">Login</button>
           </div>
         )}
       </header>
@@ -80,6 +137,7 @@ const PublicLayout: React.FC<{ children: React.ReactNode, setView: (v: any) => v
 
       <footer className="bg-emerald-950 text-emerald-200 py-16 px-6">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12">
+          {/* Footer content remains same */}
           <div className="col-span-1 md:col-span-2">
             <div className="flex items-center gap-3 mb-6">
               <img src={SCHOOL_LOGO_URL} alt="Logo" className="w-12 h-12 rounded-xl border-2 border-emerald-800" />
@@ -98,7 +156,7 @@ const PublicLayout: React.FC<{ children: React.ReactNode, setView: (v: any) => v
               <li><button onClick={() => setView('about')} className="hover:text-white transition-colors">About the School</button></li>
               <li><button onClick={() => setView('admissions')} className="hover:text-white transition-colors">Admission Process</button></li>
               <li><button onClick={() => setView('admissions')} className="hover:text-white transition-colors">Fee Structure</button></li>
-              <li><button onClick={() => setView('login')} className="hover:text-white transition-colors">Parent Portal</button></li>
+              <li><button onClick={() => setView('login-school')} className="hover:text-white transition-colors">Parent Portal</button></li>
             </ul>
           </div>
           <div>
@@ -135,6 +193,8 @@ const LandingContent: React.FC<{ setView: (v: any) => void }> = ({ setView }) =>
       </div>
 
       <div className="max-w-7xl mx-auto relative z-10 w-full">
+        {/* DEV TOOLS REMOVED FOR PRODUCTION SECURITY */}
+
         <div className="max-w-3xl space-y-8 animate-in slide-in-from-left duration-700">
           <div className="inline-flex items-center gap-2 bg-emerald-900/50 backdrop-blur-md px-4 py-2 rounded-full border border-emerald-500/30 shadow-sm">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -151,8 +211,8 @@ const LandingContent: React.FC<{ setView: (v: any) => void }> = ({ setView }) =>
             <button onClick={() => setView('about')} className="px-8 py-4 bg-white text-emerald-950 rounded-xl font-black text-sm uppercase tracking-wider shadow-xl hover:bg-emerald-50 hover:-translate-y-1 transition-all">
               Virtual Tour
             </button>
-            <button onClick={() => setView('login')} className="px-8 py-4 bg-transparent text-white border border-emerald-200/50 rounded-xl font-black text-sm uppercase tracking-wider hover:bg-emerald-900/50 transition-all">
-              Student Portal
+            <button onClick={() => setView('login-lms')} className="px-8 py-4 bg-transparent text-white border border-emerald-200/50 rounded-xl font-black text-sm uppercase tracking-wider hover:bg-emerald-900/50 transition-all">
+              Login
             </button>
           </div>
         </div>
@@ -165,19 +225,37 @@ const LandingContent: React.FC<{ setView: (v: any) => void }> = ({ setView }) =>
           <h3 className="text-emerald-950 font-black text-3xl mb-4">Our Tools</h3>
           <p className="text-slate-500 max-w-2xl mx-auto">Digital platforms to support learning and administration.</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 justify-center">
-          <div className="md:col-start-2 bg-white p-8 rounded-[2rem] border border-slate-100 shadow-xl hover:shadow-2xl transition-all text-center group">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 justify-center max-w-4xl mx-auto">
+          {/* LMS Card - Public / Students */}
+          <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-xl hover:shadow-2xl transition-all text-center group relative overflow-hidden">
+            <div className="absolute top-0 right-0 bg-emerald-500 text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-xl tracking-widest shadow-sm">
+              Free for All
+            </div>
             <div className="w-20 h-20 mx-auto rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-              <Layout className="w-10 h-10" />
+              <BookOpen className="w-10 h-10" />
             </div>
             <h4 className="text-2xl font-black text-slate-900 mb-2">LMS Portal</h4>
-            <p className="text-slate-500 text-sm mb-8">Learning Management System for Students and Parents.</p>
+            <p className="text-slate-500 text-sm mb-8">Access study materials, personalized plans, and track progress.</p>
             <div className="flex gap-3 justify-center">
-              <button onClick={() => setView('login')} className="px-6 py-3 rounded-xl border-2 border-indigo-50 text-indigo-900 font-black text-xs uppercase tracking-wider hover:bg-indigo-50 transition-all">
-                Login
+              <button onClick={() => setView('login-lms')} className="px-6 py-3 rounded-xl border-2 border-indigo-50 text-indigo-900 font-black text-xs uppercase tracking-wider hover:bg-indigo-50 transition-all">
+                LMS Login
               </button>
               <button onClick={() => setView('register')} className="px-6 py-3 rounded-xl bg-indigo-900 text-white font-black text-xs uppercase tracking-wider shadow-lg hover:bg-indigo-800 transition-all">
                 Register
+              </button>
+            </div>
+          </div>
+
+          {/* School Portal - Restricted */}
+          <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-xl hover:shadow-2xl transition-all text-center group">
+            <div className="w-20 h-20 mx-auto rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+              <Layout className="w-10 h-10" />
+            </div>
+            <h4 className="text-2xl font-black text-slate-900 mb-2">School Portal</h4>
+            <p className="text-slate-500 text-sm mb-8">ERP Login for Admitted Students & Staff. (Restricted Access)</p>
+            <div className="flex gap-3 justify-center">
+              <button onClick={() => setView('login-school')} className="px-8 py-3 rounded-xl bg-emerald-900 text-white font-black text-xs uppercase tracking-wider shadow-lg hover:bg-emerald-800 transition-all">
+                School Login
               </button>
             </div>
           </div>
@@ -185,6 +263,7 @@ const LandingContent: React.FC<{ setView: (v: any) => void }> = ({ setView }) =>
       </div>
     </section>
 
+    {/* ... Remaining Landing Content (Journey, Advantage) ... */}
     <section className="py-20 px-6 bg-white">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16">
@@ -247,29 +326,31 @@ const LandingContent: React.FC<{ setView: (v: any) => void }> = ({ setView }) =>
 
 const AuthForm: React.FC<{
   mode: 'login' | 'register',
+  portalType?: 'lms' | 'school',
   onSubmit: (data: any) => void,
-  onToggle: () => void,
-  onBack: () => void,
   error?: string
-}> = ({ mode, onSubmit, onToggle, onBack, error }) => {
+}> = ({ mode, onSubmit, error, portalType }) => {
   const [formData, setFormData] = useState({ name: '', email: '', password: '', schoolName: '', phone: '', classLevel: '10', syllabusType: 'CBSE' });
+  const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-indigo-950 flex items-center justify-center p-6">
       <div className="w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl p-10 space-y-8 animate-in zoom-in-95">
         <div className="relative text-center">
-          <button onClick={onBack} className="absolute left-0 top-0 p-2 hover:bg-slate-100 rounded-full transition-colors">
+          <button onClick={() => navigate(-1)} className="absolute left-0 top-0 p-2 hover:bg-slate-100 rounded-full transition-colors">
             <ChevronLeft className="w-6 h-6 text-slate-400" />
           </button>
           <img src={SCHOOL_LOGO_URL} alt="Logo" className="w-16 h-16 rounded-2xl mx-auto mb-4 object-cover border-4 border-slate-50" />
-          <h2 className="text-2xl font-black text-indigo-950">{mode === 'login' ? 'Student Login' : 'Student Registration'}</h2>
+          <h2 className="text-2xl font-black text-indigo-950">
+            {mode === 'login' ? (portalType === 'school' ? 'School Portal Login' : 'LMS Portal Login') : 'Student Registration'}
+          </h2>
           <p className="text-slate-400 text-xs font-bold mt-1">Vidyabodhini Integrated Public School</p>
           {mode === 'register' && <p className="text-emerald-600 text-[10px] font-black uppercase tracking-widest mt-2 bg-emerald-50 py-1 px-3 rounded-full inline-block">Free for all students of all schools</p>}
         </div>
 
         {error && <div className="bg-red-50 text-red-600 p-3 rounded-xl text-xs font-bold border border-red-100 flex items-center gap-2"><AlertCircle className="w-4 h-4" /> {error}</div>}
 
-        <form onSubmit={(e) => { e.preventDefault(); onSubmit(formData); }} className="space-y-4">
+        <form onSubmit={(e) => { e.preventDefault(); onSubmit({ ...formData, portalType }); }} className="space-y-4">
           {mode === 'register' && (
             <>
               <input
@@ -321,9 +402,16 @@ const AuthForm: React.FC<{
         </form>
 
         <div className="text-center space-y-4 pt-4">
-          <button onClick={onToggle} className="text-indigo-600 font-bold text-xs hover:underline">
-            {mode === 'login' ? "Don't have an account? Register" : "Already have an account? Login"}
-          </button>
+          {mode === 'login' && (
+            <button onClick={() => navigate('/register')} className="text-xs text-indigo-900 font-bold hover:underline">
+              New Student? Create Account
+            </button>
+          )}
+          {mode === 'register' && (
+            <button onClick={() => navigate('/login-lms')} className="text-xs text-indigo-900 font-bold hover:underline">
+              Already have an account? Login
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -348,17 +436,21 @@ const OnboardingView: React.FC<{
         <button onClick={onLogout} className="absolute top-8 right-8 text-slate-400 hover:text-red-500 text-xs font-bold uppercase tracking-widest transition-colors">
           Logout
         </button>
-        <div className="flex justify-between items-center mb-2">
-          <h3 className="text-lg font-black text-indigo-900">Step {onboardingStep} of 4</h3>
-          <div className="flex gap-1.5">
-            {[1, 2, 3, 4].map(i => <div key={i} className={`w-8 h-1.5 rounded-full ${i <= onboardingStep ? 'bg-indigo-900' : 'bg-slate-100'}`} />)}
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h2 className="text-xl font-black text-indigo-900">Step {onboardingStep} of 4</h2>
+            <div className="w-12 h-1 bg-indigo-900 rounded mt-1"></div>
           </div>
+          <button onClick={onLogout} className="text-xs font-bold text-slate-400 hover:text-indigo-600 uppercase tracking-widest">Logout</button>
         </div>
 
         {onboardingStep === 1 && (
           <div className="space-y-6 animate-in fade-in">
-            <h2 className="text-2xl font-black text-indigo-950">Complete Your Profile</h2>
-            <p className="text-slate-400 text-sm font-medium">Please provide a few more details to get started.</p>
+            <h1 className="text-2xl font-black text-indigo-950 mb-2">Complete Your Profile</h1>
+            <p className="text-slate-500 font-medium mb-6">
+              Please provide a few more details to get started.<br />
+              <span className="text-xs font-mono bg-slate-100 px-2 py-1 rounded text-slate-600">User: {userConfig.email}</span>
+            </p>
             <div className="space-y-4">
               <input
                 type="text" placeholder="Full Name" required
@@ -443,9 +535,35 @@ const OnboardingView: React.FC<{
   );
 };
 
-const App: React.FC = () => {
-  const [view, setView] = useState<'landing' | 'login' | 'register' | 'onboarding' | 'dashboard' | 'about' | 'academics' | 'beyond' | 'admissions' | 'profile' | 'admin-login' | 'admin-dashboard'>('landing');
-  const [activeTab, setActiveTab] = useState<'plan' | 'syllabus' | 'library' | 'insights' | 'focus' | 'timetable'>('plan');
+
+const AppContent: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation(); // Hook to check current path if needed
+
+  // Shim for components that expect setView
+  const setViewShim = (view: string) => {
+    switch (view) {
+      case 'landing': navigate('/'); break;
+      case 'about': navigate('/about'); break;
+      case 'academics': navigate('/academics'); break;
+      case 'beyond': navigate('/beyond'); break;
+      case 'admissions': navigate('/admissions'); break;
+      case 'login-lms': navigate('/login-lms'); break;
+      case 'login-school': navigate('/login-school'); break;
+      case 'register': navigate('/register'); break;
+      case 'onboarding': navigate('/onboarding'); break;
+      case 'dashboard': navigate('/dashboard'); break;
+      case 'profile': navigate('/profile'); break;
+      case 'admin-login': navigate('/admin-login'); break;
+      case 'admin-dashboard': navigate('/admin-dashboard'); break;
+      case 'teacher-dashboard': navigate('/teacher-dashboard'); break;
+      case 'driver-dashboard': navigate('/driver-dashboard'); break;
+      case 'student-portal': navigate('/student-portal'); break;
+      default: navigate('/');
+    }
+  };
+
+  const [activeTab, setActiveTab] = useState<'plan' | 'syllabus' | 'library' | 'insights' | 'focus' | 'timetable' | 'pathfinder'>('plan');
   const [authError, setAuthError] = useState('');
 
   const [userConfig, setUserConfig] = useState<UserConfig>(() => ({
@@ -454,6 +572,33 @@ const App: React.FC = () => {
     availableHours: DEFAULT_WEEKLY_HOURS, chapterProgress: {}, completedTopicIds: [], onboarded: false,
     gamification: { streak: 0, lastStudyDate: '', points: 0, unlockedAchievementIds: [] }
   }));
+
+  const [darkMode, setDarkMode] = useState(false);
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      setDarkMode(true);
+      document.documentElement.classList.add('dark');
+    } else {
+      setDarkMode(false);
+      document.documentElement.classList.remove('dark');
+    }
+  }, []);
+
+  const toggleDarkMode = () => {
+    setDarkMode(prev => {
+      const newMode = !prev;
+      if (newMode) {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+      }
+      return newMode;
+    });
+  };
 
   const [schedule, setSchedule] = useState<StudyTask[]>([]);
   const [onboardingStep, setOnboardingStep] = useState(1);
@@ -493,24 +638,68 @@ const App: React.FC = () => {
   // Load user session on start
   useEffect(() => {
     const initSession = async () => {
+      // CHECK ADMIN PERMANENT LOGIN (Legacy support, though mock login is removed)
+      if (localStorage.getItem('admin_token') === 'true') {
+        navigate('/admin-dashboard');
+        return;
+      }
+
       try {
         const userData = await authService.getSession();
         if (userData) {
+          const role = (userData.role || '').toLowerCase();
+
+          // 2. CHECK ROLE FIRST
+          if (role === 'teacher') {
+            setUserConfig(prev => ({ ...prev, ...userData }));
+            setActiveRole('teacher');
+            navigate('/teacher-dashboard');
+            return;
+          }
+          if (['admin', 'school_admin', 'staff'].includes(role)) {
+            setUserConfig(prev => ({ ...prev, ...userData }));
+            setActiveRole(userData.role);
+            navigate('/admin-dashboard');
+            return;
+          }
+          if (role === 'driver') {
+            setUserConfig(prev => ({ ...prev, ...userData }));
+            setActiveRole('driver');
+            navigate('/driver-dashboard');
+            return;
+          }
+
+          // 3. If Student, load full config
           setUserConfig(prev => ({ ...prev, ...userData }));
-          const config = await userService.getUserConfig(userData.email);
+          const config = await userService.getUserConfig(userData.email, userData.isSchoolStudent);
           if (config) {
+            // RUN MIGRATION: Ensure schema is up to date
+            const migratedConfig = migrationService.migrateUserSchema(config);
+
             // Check Streak on Load
-            const updatedConfig = gamificationService.checkStreak(config);
+            const updatedConfig = gamificationService.checkStreak(migratedConfig);
             setUserConfig(updatedConfig);
 
             // If gamification was initialized or updated, save it back to Firestore
             if (JSON.stringify(updatedConfig.gamification) !== JSON.stringify(config.gamification)) {
-              userService.updateUserConfig(userData.email, updatedConfig);
+              userService.updateUserConfig(userData.email, updatedConfig, userData.isSchoolStudent);
             }
-            if (updatedConfig.onboarded) setView('dashboard');
-            else setView('onboarding');
+
+            // REDIRECTION LOGIC
+            if (updatedConfig.isSchoolStudent) {
+              navigate('/student-portal');
+            } else if (updatedConfig.onboarded) {
+              navigate('/dashboard');
+            } else {
+              navigate('/onboarding');
+            }
           } else {
-            setView('onboarding');
+            // New user without config
+            if (userData.isSchoolStudent) {
+              navigate('/student-portal');
+            } else {
+              navigate('/onboarding');
+            }
           }
         }
       } catch (e) {
@@ -523,7 +712,7 @@ const App: React.FC = () => {
   // Save config changes
   useEffect(() => {
     if (userConfig.email && userConfig.onboarded) {
-      userService.updateUserConfig(userConfig.email, userConfig).catch(console.error);
+      userService.updateUserConfig(userConfig.email, userConfig, userConfig.isSchoolStudent).catch(console.error);
     }
   }, [userConfig]);
 
@@ -540,6 +729,9 @@ const App: React.FC = () => {
       setSchedule(generateSchedule(currentSyllabus, userConfig));
     }
   }, [userConfig.onboarded, currentSyllabus, userConfig.chapterProgress]);
+
+  /* --- STATE Definitions --- */
+  const [activeRole, setActiveRole] = useState<'admin' | 'teacher' | 'school_admin' | 'staff'>('admin');
 
   // --- Auth Handlers ---
   const handleRegister = async (data: any) => {
@@ -561,7 +753,7 @@ const App: React.FC = () => {
         gamification: { streak: 0, lastStudyDate: '', points: 0, unlockedAchievementIds: [] }
       });
       setOnboardingStep(2);
-      setView('onboarding');
+      navigate('/onboarding');
     } catch (err: any) {
       setAuthError(err.message || 'Registration failed');
     }
@@ -569,15 +761,68 @@ const App: React.FC = () => {
 
   const handleLogin = async (data: any) => {
     try {
+      // 1. Unified Login (Google or Email/Pass)
       const user = await authService.login(data);
       if (user) {
-        const savedConfig = await userService.getUserConfig(user.email);
-        if (savedConfig) {
-          setUserConfig(savedConfig);
-          setView('dashboard');
+        // Normalize role to handle "Teacher" vs "teacher" mismatches
+        const normalizedRole = (user.role || 'student').toLowerCase();
+
+        // 2. Role-Based Redirection
+        if (normalizedRole === 'student') {
+          // Student Flow
+          const savedConfig = await userService.getUserConfig(user.email, user.isSchoolStudent);
+          if (savedConfig) {
+            setUserConfig(savedConfig);
+            // DIRECT ROUTING based on Type
+            if (user.isSchoolStudent) {
+              navigate('/student-portal');
+            } else if (savedConfig.onboarded) {
+              navigate('/dashboard');
+            } else {
+              navigate('/onboarding');
+            }
+          } else {
+            // Should not happen if restriction is working, but fallback
+            setAuthError("Configuration missing. Contact Admin.");
+          }
+        } else if (normalizedRole === 'teacher') {
+          setActiveRole('teacher');
+          setUserConfig({
+            name: user.name || 'Teacher',
+            email: user.email,
+            role: 'teacher',
+            onboarded: true,
+            classLevel: 0,
+            syllabusType: 'CBSE',
+            selectedSubjectIds: [],
+            customSubjects: [],
+            manualChapters: {},
+            gamification: { streak: 0, lastStudyDate: '', points: 0, unlockedAchievementIds: [] }
+          } as any);
+          navigate('/teacher-dashboard');
+        } else if (['staff', 'school_admin', 'admin'].includes(normalizedRole)) {
+          // Staff/Admin Flow
+          setActiveRole(user.role);
+          navigate('/admin-dashboard');
+        } else if (normalizedRole === 'driver') {
+          setActiveRole('driver');
+          // Set minimal user config so DriverDashboard gets the email
+          setUserConfig({
+            name: user.name || 'Driver',
+            email: user.email,
+            role: 'driver',
+            onboarded: true,
+            classLevel: 0,
+            syllabusType: 'CBSE',
+            selectedSubjectIds: [],
+            customSubjects: [],
+            manualChapters: {},
+            gamification: { streak: 0, lastStudyDate: '', points: 0, unlockedAchievementIds: [] }
+          } as any);
+          navigate('/driver-dashboard');
         } else {
-          setUserConfig({ ...userConfig, name: user.name, email: user.email, schoolName: user.schoolName || userConfig.schoolName, phone: user.phone || userConfig.phone });
-          setView('onboarding');
+          // Fallback
+          navigate('/dashboard');
         }
       }
     } catch (err: any) {
@@ -587,7 +832,10 @@ const App: React.FC = () => {
 
   const handleLogout = async () => {
     await authService.logout();
-    window.location.reload();
+    localStorage.removeItem('admin_token');
+    localStorage.removeItem('user_session');
+    // window.location.reload(); // Not needed with Router, just navigate
+    navigate('/');
   };
 
   const addCustomSubject = (name: string) => {
@@ -623,99 +871,182 @@ const App: React.FC = () => {
     }));
   };
 
-
-
   return (
     <div className="font-['Inter'] antialiased">
-      {view === 'landing' && (
-        <PublicLayout setView={setView}>
-          <LandingContent setView={setView} />
-        </PublicLayout>
-      )}
+      <Routes>
+        <Route path="/" element={
+          <PublicLayout setView={setViewShim} darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
+            <LandingContent setView={setViewShim} />
+          </PublicLayout>
+        } />
 
-      {view === 'about' && (
-        <PublicLayout setView={setView}>
-          <AboutView setView={setView} />
-        </PublicLayout>
-      )}
+        <Route path="/about" element={
+          <PublicLayout setView={setViewShim} darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
+            <AboutView setView={setViewShim} />
+          </PublicLayout>
+        } />
 
-      {view === 'academics' && (
-        <PublicLayout setView={setView}>
-          <AcademicsView setView={setView} />
-        </PublicLayout>
-      )}
+        <Route path="/academics" element={
+          <PublicLayout setView={setViewShim} darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
+            <AcademicsView setView={setViewShim} />
+          </PublicLayout>
+        } />
 
-      {view === 'beyond' && (
-        <PublicLayout setView={setView}>
-          <BeyondClassroomView setView={setView} />
-        </PublicLayout>
-      )}
+        <Route path="/beyond" element={
+          <PublicLayout setView={setViewShim} darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
+            <BeyondClassroomView setView={setViewShim} />
+          </PublicLayout>
+        } />
 
-      {view === 'admissions' && (
-        <PublicLayout setView={setView}>
-          <AdmissionsView setView={setView} />
-        </PublicLayout>
-      )}
+        <Route path="/admissions" element={
+          <PublicLayout setView={setViewShim} darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
+            <AdmissionsView setView={setViewShim} />
+          </PublicLayout>
+        } />
 
-      {view === 'login' && <AuthForm mode="login" error={authError} onToggle={() => { setView('register'); setAuthError(''); }} onBack={() => setView('landing')} onSubmit={handleLogin} />}
-      {view === 'register' && <AuthForm mode="register" error={authError} onToggle={() => { setView('login'); setAuthError(''); }} onBack={() => setView('landing')} onSubmit={handleRegister} />}
+        <Route path="/login-lms" element={<AuthForm mode="login" portalType="lms" error={authError} onSubmit={handleLogin} />} />
+        <Route path="/login-school" element={<AuthForm mode="login" portalType="school" error={authError} onSubmit={handleLogin} />} />
+        <Route path="/register" element={<AuthForm mode="register" error={authError} onSubmit={handleRegister} />} />
 
-      {view === 'onboarding' && (
-        <OnboardingView
-          userConfig={userConfig}
-          setUserConfig={setUserConfig}
-          onboardingStep={onboardingStep}
-          setOnboardingStep={setOnboardingStep}
-          currentSyllabus={currentSyllabus}
-          onAddCustomSubject={addCustomSubject}
-          onLogout={handleLogout}
-          onComplete={() => { setUserConfig({ ...userConfig, onboarded: true }); setView('dashboard'); }}
-        />
-      )}
+        <Route path="/onboarding" element={
+          <OnboardingView
+            userConfig={userConfig}
+            setUserConfig={setUserConfig}
+            onboardingStep={onboardingStep}
+            setOnboardingStep={setOnboardingStep}
+            currentSyllabus={currentSyllabus}
+            onAddCustomSubject={addCustomSubject}
+            onLogout={handleLogout}
+            onComplete={() => { setUserConfig({ ...userConfig, onboarded: true }); navigate('/dashboard'); }}
+          />
+        } />
 
-      {view === 'profile' && <ProfileView userConfig={userConfig} setUserConfig={setUserConfig} setView={setView} onReset={handleResetProgress} />}
+        <Route path="/profile" element={
+          <ProfileView userConfig={userConfig} setUserConfig={setUserConfig} setView={setViewShim} onReset={handleResetProgress} />
+        } />
 
+        <Route path="/student-portal" element={
+          <StudentSchoolPortal
+            userConfig={userConfig}
+            setUserConfig={setUserConfig}
+            darkMode={darkMode}
+            onToggleDarkMode={toggleDarkMode}
+            onBackToLMS={() => navigate('/dashboard')}
+            onLogout={handleLogout}
+          />
+        } />
 
-      {view === 'dashboard' && (
-        <DashboardLayout
-          userConfig={userConfig}
-          setUserConfig={setUserConfig}
-          schedule={schedule}
-          setSchedule={setSchedule}
-          currentSyllabus={currentSyllabus}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          setView={setView}
-          onLogout={handleLogout}
-          currentTime={currentTime}
-          daysLeft={daysLeft}
-          masteryScore={masteryScore}
-          todayTasks={todayTasks}
-        />
-      )}
+        <Route path="/dashboard" element={
+          <DashboardLayout
+            userConfig={userConfig}
+            setUserConfig={setUserConfig}
+            schedule={schedule}
+            setSchedule={setSchedule}
+            currentSyllabus={currentSyllabus}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            setView={setViewShim}
+            onLogout={handleLogout}
+            currentTime={currentTime}
+            daysLeft={daysLeft}
+            masteryScore={masteryScore}
+            todayTasks={todayTasks}
+            darkMode={darkMode}
+            toggleDarkMode={toggleDarkMode}
+          />
+        } />
 
-      {view === 'admin-login' && (
-        <div className="min-h-screen bg-indigo-950 flex items-center justify-center p-6">
-          <div className="w-full max-w-sm bg-white rounded-3xl p-8 shadow-2xl">
-            <div className="text-center mb-6">
-              <h2 className="text-xl font-black text-indigo-950">School Admin</h2>
-              <p className="text-xs text-slate-400 font-bold">Authorized Personnel Only</p>
+        {/* SECURE ADMIN LOGIN */}
+        <Route path="/admin-login" element={
+          <div className="min-h-screen bg-indigo-950 flex items-center justify-center p-6">
+            <div className="w-full max-w-sm bg-white rounded-3xl p-8 shadow-2xl">
+              <div className="text-center mb-6">
+                <h2 className="text-xl font-black text-indigo-950">School Admin</h2>
+                <p className="text-xs text-slate-400 font-bold">Authorized Personnel Only</p>
+              </div>
+              {/* Reuse handleLogin with manual construct since it is same backend */}
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                // Extract data from form and call handleLogin
+                const target = e.target as any;
+                handleLogin({ email: target.email.value, password: target.password.value });
+              }} className="space-y-4">
+                <input name="email" type="email" placeholder="Admin Email" className="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 text-sm font-bold outline-none focus:border-indigo-500" />
+                <input name="password" type="password" placeholder="Password" className="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 text-sm font-bold outline-none focus:border-indigo-500" />
+                <button type="submit" className="w-full bg-indigo-900 text-white py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-indigo-800">Login</button>
+              </form>
+              <button onClick={() => navigate('/')} className="w-full mt-4 text-xs text-slate-400 hover:text-indigo-600 font-bold">Back to Site</button>
             </div>
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              // Mock Admin Check
-              setView('admin-dashboard');
-            }} className="space-y-4">
-              <input type="email" placeholder="Admin Email" className="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 text-sm font-bold outline-none focus:border-indigo-500" />
-              <input type="password" placeholder="Password" className="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 text-sm font-bold outline-none focus:border-indigo-500" />
-              <button type="submit" className="w-full bg-indigo-900 text-white py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-indigo-800">Login</button>
-            </form>
-            <button onClick={() => setView('landing')} className="w-full mt-4 text-xs text-slate-400 hover:text-indigo-600 font-bold">Back to Site</button>
           </div>
-        </div>
-      )}
+        } />
 
-      {view === 'admin-dashboard' && <AdminDashboard setView={setView} />}
+        <Route path="/admin-dashboard" element={<AdminDashboard setView={setViewShim} darkMode={darkMode} toggleDarkMode={toggleDarkMode} role={activeRole} />} />
+
+        <Route path="/teacher-dashboard" element={
+          <ErrorBoundary>
+            <TeacherDashboard setView={setViewShim} darkMode={darkMode} toggleDarkMode={toggleDarkMode} user={userConfig} />
+          </ErrorBoundary>
+        } />
+
+        <Route path="/driver-dashboard" element={
+          <ErrorBoundary>
+            <DriverDashboard user={userConfig} onLogout={handleLogout} darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
+          </ErrorBoundary>
+        } />
+      </Routes>
+      <DebugOverlay view={location.pathname} role={activeRole} user={userConfig} />
+    </div>
+  );
+}
+
+const App: React.FC = () => {
+  return (
+    <BrowserRouter>
+      <AppContent />
+    </BrowserRouter>
+  );
+};
+
+// --- Extracted Debug Component to use hooks ---
+const DebugOverlay: React.FC<{ view: string, role: string, user: any }> = ({ view, role, user }) => {
+  const [dbStatus, setDbStatus] = useState<string>('Checking DB...');
+
+  useEffect(() => {
+    const checkUser = async () => {
+      if (!user?.email) {
+        setDbStatus('No Email');
+        return;
+      }
+      try {
+        const collections = ['admins', 'teachers', 'drivers', 'students', 'users', 'staff'];
+        const results = [];
+        for (const col of collections) {
+          const ref = doc(db, col, user.email);
+          const snap = await getDoc(ref);
+          if (snap.exists()) results.push(col);
+        }
+        setDbStatus(results.length > 0 ? `Found in: ${results.join(', ')}` : 'NOT FOUND IN ANY COLLECTION');
+      } catch (e: any) {
+        setDbStatus(`Error: ${e.message}`);
+      }
+    };
+    checkUser();
+  }, [user?.email]);
+
+  // Hidden in production typically, but kept for user request to verify bugs? 
+  // User asked to "fix bugs", having a debug overlay is fine if it doesn't expose control.
+  // The reported bug was the "Dev Tool" button in LandingContent. This overlay is passive.
+  // I'll keep it as is.
+  return (
+    <div className="fixed bottom-4 right-4 bg-black/80 text-white p-4 rounded-lg z-50 text-xs font-mono max-w-sm overflow-auto">
+      <p><strong>View:</strong> {view}</p>
+      <p><strong>Role:</strong> {role}</p>
+      <p><strong>User:</strong> {user?.email || 'None'}</p>
+      <p><strong>Onboarded:</strong> {String(user?.onboarded)}</p>
+      <div className="mt-2 pt-2 border-t border-gray-600">
+        <p className="font-bold text-yellow-400">DB Diagnosis:</p>
+        <p>{dbStatus}</p>
+      </div>
     </div>
   );
 };

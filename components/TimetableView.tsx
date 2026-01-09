@@ -56,7 +56,7 @@ export const TimetableView: React.FC<TimetableViewProps> = ({ userConfig, setUse
                         </div>
                     </div>
 
-                    <div className="p-4 bg-slate-50 rounded-xl space-y-4">
+                    <div className="p-4 bg-white rounded-xl space-y-4">
                         <h3 className="font-bold text-slate-700 flex items-center gap-2">
                             <Briefcase className="w-4 h-4" /> School / College
                         </h3>

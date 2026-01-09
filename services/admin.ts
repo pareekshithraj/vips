@@ -1,7 +1,8 @@
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from './firebase';
 import { UserConfig } from '../types';
 import { differenceInCalendarDays } from 'date-fns';
+import { PortalType, portalContextService } from './portalContext';
 
 export interface StudentSummary {
     id: string;
@@ -13,26 +14,34 @@ export interface StudentSummary {
     lastActive: string;
     status: 'Active' | 'Inactive';
     email: string;
+    schoolName: string;
+    phone: string;
+    careerPath?: string;
 }
 
-const MOCK_STUDENTS: StudentSummary[] = [
-    { id: '1', name: 'Aarav Sharma', class: '10', section: 'A', syllabus: 'CBSE', progress: 85, lastActive: 'Today', status: 'Active', email: 'aarav@example.com' },
-    { id: '2', name: 'Priya P.', class: '10', section: 'B', syllabus: 'CBSE', progress: 72, lastActive: 'Today', status: 'Active', email: 'priya@example.com' },
-    { id: '3', name: 'Vikram Singh', class: '12', section: 'A', syllabus: 'CBSE', progress: 45, lastActive: 'Yesterday', status: 'Active', email: 'vikram@example.com' },
-    { id: '4', name: 'Sneha K.', class: '9', section: 'C', syllabus: 'State', progress: 91, lastActive: 'Today', status: 'Active', email: 'sneha@example.com' },
-    { id: '5', name: 'Rahul V.', class: '10', section: 'A', syllabus: 'CBSE', progress: 60, lastActive: '2 days ago', status: 'Active', email: 'rahul@example.com' },
-    { id: '6', name: 'Ananya Gupta', class: '11', section: 'B', syllabus: 'CBSE', progress: 30, lastActive: '1 week ago', status: 'Inactive', email: 'ananya@example.com' },
-    { id: '7', name: 'Rohan Mehta', class: '12', section: 'Science', syllabus: 'CBSE', progress: 55, lastActive: 'Today', status: 'Active', email: 'rohan@example.com' },
-    { id: '8', name: 'Ishaan Kumar', class: '8', section: 'A', syllabus: 'State', progress: 20, lastActive: '3 days ago', status: 'Active', email: 'ishaan@example.com' },
-    { id: '9', name: 'Mira Nair', class: '10', section: 'B', syllabus: 'CBSE', progress: 78, lastActive: 'Today', status: 'Active', email: 'mira@example.com' },
-    { id: '10', name: 'Kabir Das', class: '11', section: 'Commerce', syllabus: 'CBSE', progress: 40, lastActive: 'Yesterday', status: 'Active', email: 'kabir@example.com' }
-];
+
 
 export const adminService = {
-    async getAllStudents(): Promise<StudentSummary[]> {
+    /**
+     * Get all students for the current portal
+     * LMS: Fetches from 'users' collection (all students from all schools)
+     * SCHOOL: Fetches from 'students' collection (school-specific students only)
+     */
+    async getAllStudents(portal: PortalType = 'school'): Promise<StudentSummary[]> {
         try {
-            const usersRef = collection(db, 'users');
-            const querySnapshot = await getDocs(usersRef);
+            let querySnapshot;
+
+            if (portal === 'lms') {
+                console.log("Fetching LMS Students from 'users' collection");
+                const usersRef = collection(db, 'users');
+                querySnapshot = await getDocs(usersRef);
+            } else {
+                console.log("Fetching School Students from 'students' collection");
+                const schoolId = portalContextService.getPortalContext('school').schoolId!;
+                const studentsRef = collection(db, 'students');
+                const q = query(studentsRef, where('schoolId', '==', schoolId));
+                querySnapshot = await getDocs(q);
+            }
 
             return querySnapshot.docs.map(doc => {
                 const data = doc.data() as UserConfig;
@@ -67,7 +76,10 @@ export const adminService = {
                     progress: progress,
                     lastActive: lastActive,
                     status: status,
-                    email: data.email || doc.id
+                    email: data.email || doc.id,
+                    schoolName: data.schoolName || 'N/A',
+                    phone: data.phone || 'N/A',
+                    careerPath: data.careerPath?.recommended
                 };
             });
         } catch (error) {
@@ -76,8 +88,8 @@ export const adminService = {
         }
     },
 
-    async getStats() {
-        const students = await this.getAllStudents();
+    async getStats(portal: PortalType = 'school') {
+        const students = await this.getAllStudents(portal);
         const totalStudents = students.length;
         const activeToday = students.filter(s => s.lastActive === 'Today').length;
         const avgProgress = totalStudents > 0
