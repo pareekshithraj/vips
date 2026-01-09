@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, Navigate, useLocation } from 'react-router-dom';
 import {
   Layout, ChevronLeft, Menu, X, AlertCircle,
-  GraduationCap, Moon, Sun, CheckCircle, BookOpen
+  GraduationCap, Moon, Sun, CheckCircle, BookOpen, Zap
 } from 'lucide-react';
 import { format, parseISO, differenceInDays } from 'date-fns';
 
@@ -225,7 +225,23 @@ const LandingContent: React.FC<{ setView: (v: any) => void }> = ({ setView }) =>
           <h3 className="text-emerald-950 font-black text-3xl mb-4">Our Tools</h3>
           <p className="text-slate-500 max-w-2xl mx-auto">Digital platforms to support learning and administration.</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 justify-center max-w-4xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 justify-center max-w-6xl mx-auto">
+          {/* ACE Your Boards - Free Tool */}
+          <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-xl hover:shadow-2xl transition-all text-center group relative overflow-hidden">
+            <div className="absolute top-0 right-0 bg-emerald-500 text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-xl tracking-widest shadow-sm">
+              Free for All
+            </div>
+            <div className="w-20 h-20 mx-auto rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+              <Zap className="w-10 h-10" />
+            </div>
+            <h4 className="text-2xl font-black text-slate-900 mb-2">ACE Your Boards</h4>
+            <p className="text-slate-500 text-sm mb-8">Boost your exam preparation with our free revision planner.</p>
+            <div className="flex gap-3 justify-center">
+              <a href="/ace_your_boards/index.html" target="_blank" rel="noopener noreferrer" className="px-8 py-3 rounded-xl bg-orange-600 text-white font-black text-xs uppercase tracking-wider shadow-lg hover:bg-orange-700 transition-all">
+                Visit Now
+              </a>
+            </div>
+          </div>
           {/* LMS Card - Public / Students */}
           <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-xl hover:shadow-2xl transition-all text-center group relative overflow-hidden">
             <div className="absolute top-0 right-0 bg-emerald-500 text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-xl tracking-widest shadow-sm">
