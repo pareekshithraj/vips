@@ -2,37 +2,691 @@
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Vidyabodhini</title>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Inter', 'sans-serif'],
-          }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACE YOUR BOARDS</title>
+    <style>
+        :root {
+            --primary: #1a73e8;
+            --secondary: #4f46e5;
+            --bg: #f8fafc;
+            --red: #ef4444;
+            --amber: #f59e0b;
+            --green: #10b981;
         }
-      }
-    }
-  </script>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    body {
-      font-family: 'Inter', sans-serif;
-    }
-  </style>
 
-  <link rel="stylesheet" href="/index.css">
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: var(--bg);
+            color: #1e293b;
+            padding: 15px;
+            line-height: 1.4;
+            user-select: none;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: auto;
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .no-print {
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary);
+            font-weight: 800;
+            margin-bottom: 5px;
+        }
+
+        #countdown {
+            background: #ea580c;
+            color: white;
+            text-align: center;
+            padding: 10px;
+            border-radius: 8px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .setup-section {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        textarea,
+        input,
+        select {
+            padding: 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            width: 100%;
+            box-sizing: border-box;
+            font-size: 14px;
+            display: block;
+        }
+
+        .audit-container {
+            border-left: 5px solid var(--primary);
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .chapter-row {
+            display: grid;
+            grid-template-columns: 30px 1fr 180px;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            align-items: center;
+            transition: 0.2s;
+        }
+
+        .chapter-row:has(input:not(:checked)) {
+            opacity: 0.4;
+            background: #f1f5f9;
+        }
+
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 25px;
+            table-layout: fixed;
+        }
+
+        .summary-table th {
+            padding: 10px;
+            color: white;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .summary-table td {
+            border: 1px solid #e2e8f0;
+            padding: 8px;
+            vertical-align: top;
+            font-size: 11px;
+        }
+
+        .head-sub {
+            background: #475569;
+            width: 15%;
+        }
+
+        .head-red {
+            background: var(--red);
+            width: 25%;
+        }
+
+        .head-amber {
+            background: var(--amber);
+            width: 25%;
+        }
+
+        .head-green {
+            background: var(--green);
+            width: 25%;
+        }
+
+        .head-hours {
+            background: var(--secondary);
+            width: 10%;
+        }
+
+        .btn-main {
+            background: var(--primary);
+            color: white;
+            padding: 18px;
+            border: none;
+            border-radius: 10px;
+            width: 100%;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .btn-main:hover {
+            background: var(--secondary);
+            opacity: 0.9;
+        }
+
+        .planner-day {
+            margin-bottom: 15px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .planner-date {
+            background: #f1f5f9;
+            padding: 8px 15px;
+            font-weight: bold;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        select.sel-rag[data-val="3"] {
+            background-color: #fee2e2;
+            color: #b91c1c;
+            font-weight: bold;
+        }
+
+        select.sel-rag[data-val="2"] {
+            background-color: #fef3c7;
+            color: #b45309;
+            font-weight: bold;
+        }
+
+        select.sel-rag[data-val="1"] {
+            background-color: #d1fae5;
+            color: #047857;
+            font-weight: bold;
+        }
+
+        .mastery-card {
+            background: #ecfdf5;
+            border: 2px solid #10b981;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+        }
+
+        .choice-card {
+            background: #fff;
+            border: 2px solid var(--secondary);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .btn-choice {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 5px;
+        }
+
+        .slot-crit {
+            background: #fee2e2;
+            color: #b91c1c;
+            font-weight: bold;
+        }
+
+        .slot-prac {
+            background: #fef3c7;
+            color: #b45309;
+        }
+
+        .slot-recap {
+            background: #d1fae5;
+            color: #047857;
+        }
+
+        .slot-final {
+            background: #e0e7ff;
+            color: #3730a3;
+            font-weight: bold;
+        }
+
+        .slot-sunday {
+            background: #fef3c7;
+            color: #92400e;
+            border: 2px dashed #f59e0b;
+        }
+
+        .feasibility-badge {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            margin-bottom: 15px;
+            display: inline-block;
+        }
+
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+
+            .container {
+                box-shadow: none;
+                border: none;
+                width: 100%;
+                padding: 0;
+            }
+        }
+    </style>
 </head>
 
-<body class="bg-slate-50 text-slate-900">
-  <div id="root"></div>
-  <script type="module" src="/index.tsx"></script>
+<body oncontextmenu="return false;">
+
+    <div class="container">
+        <div id="countdown" class="no-print">🔥 KARNATAKA STATE SSLC BOARD EXAMS: <span
+                id="daysCount">CALCULATING...</span></div>
+        <div id="auditPhase" class="no-print">
+            <h1>ACE YOUR BOARD'S - 95%+ REVISION STRATEGY</h1>
+
+            <div class="setup-section">
+                <h3>1. Student Details & Schedule</h3>
+                <div class="grid-3">
+                    <input type="text" id="initName" placeholder="Student Name">
+                    <input type="text" id="schoolName" placeholder="School Name"> <select id="initDistrict">
+                        <option value="">Select District</option>
+                        <option value="Bagalkot">Bagalkot</option>
+                        <option value="Ballari">Ballari</option>
+                        <option value="Belagavi">Belagavi</option>
+                        <option value="Bengaluru Rural">Bengaluru Rural</option>
+                        <option value="Bengaluru Urban">Bengaluru Urban</option>
+                        <option value="Bidar">Bidar</option>
+                        <option value="Chamarajanagar">Chamarajanagar</option>
+                        <option value="Chikkaballapur">Chikkaballapur</option>
+                        <option value="Chikkamagaluru">Chikkamagaluru</option>
+                        <option value="Chitradurga">Chitradurga</option>
+                        <option value="Dakshina Kannada">Dakshina Kannada</option>
+                        <option value="Davanagere">Davanagere</option>
+                        <option value="Dharwad">Dharwad</option>
+                        <option value="Gadag">Gadag</option>
+                        <option value="Hassan">Hassan</option>
+                        <option value="Haveri">Haveri</option>
+                        <option value="Kalaburagi">Kalaburagi</option>
+                        <option value="Kodagu">Kodagu</option>
+                        <option value="Kolar">Kolar</option>
+                        <option value="Koppal">Koppal</option>
+                        <option value="Mandya">Mandya</option>
+                        <option value="Mysuru">Mysuru</option>
+                        <option value="Raichur">Raichur</option>
+                        <option value="Ramanagara">Ramanagara</option>
+                        <option value="Shivamogga">Shivamogga</option>
+                        <option value="Tumakuru">Tumakuru</option>
+                        <option value="Udupi">Udupi</option>
+                        <option value="Uttara Kannada">Uttara Kannada</option>
+                        <option value="Vijayanagara">Vijayanagara</option>
+                        <option value="Vijayapura">Vijayapura</option>
+                        <option value="Yadgir">Yadgir</option>
+                    </select>
+                </div>
+                <div class="grid-3" style="margin-top:15px;">
+                    <select id="studyStyle">
+                        <option value="">Study Preference</option>
+                        <option value="Early Bird">Early Bird (Morning Focus)</option>
+                        <option value="Night Owl">Night Owl (Night Focus)</option>
+                    </select>
+                    <div>
+                        <label style="font-size:11px; font-weight:bold; color:var(--primary)">Revision Start
+                            Date</label>
+                        <input type="date" id="revStart">
+                    </div>
+                    <div>
+                        <label style="font-size:11px; font-weight:bold; color:var(--primary)">Revision Finish
+                            Date</label>
+                        <input type="date" id="revEnd" value="2026-03-10">
+                    </div>
+                </div>
+            </div>
+
+            <div class="setup-section">
+                <h3>2. LANGUAGE SYLLABUS</h3>
+                <div class="grid-3">
+                    <textarea id="l1_in" placeholder="First Lang Chapters (comma separated)..."
+                        onblur="syncLangs()"></textarea>
+                    <textarea id="l2_in" placeholder="Second Lang Chapters (comma separated)..."
+                        onblur="syncLangs()"></textarea>
+                    <textarea id="l3_in" placeholder="Third Lang Chapters (comma separated)..."
+                        onblur="syncLangs()"></textarea>
+                </div>
+            </div>
+
+            <div class="audit-container">
+                <h3>3. Chapter Readiness Audit</h3>
+                <div id="langSyllabus"></div>
+                <div id="coreSyllabus"></div>
+            </div>
+
+            <button type="button" class="btn-main" onclick="processAudit()" style="margin-top:20px;">ANALYSE MY
+                READINESS</button>
+        </div>
+
+        <div id="resultArea" style="display:none;">
+            <h2 style="color:var(--primary); text-align:center; margin-bottom:5px;">KARNATAKA SSLC BOARD EXAM STRATEGY
+            </h2>
+            <div id="personalHeader"
+                style="text-align:center; font-weight:bold; color:#475569; border-bottom:1px solid #ddd; padding-bottom:10px; margin-bottom:15px;">
+            </div>
+
+            <div id="masteryDisplay"></div>
+            <div id="feasibilitySection" style="text-align:center; margin-bottom:20px;"></div>
+
+            <table class="summary-table">
+                <thead>
+                    <tr>
+                        <th class="head-sub">Subject</th>
+                        <th class="head-red">Critical</th>
+                        <th class="head-amber">Practice</th>
+                        <th class="head-green">Mastered</th>
+                        <th class="head-hours">Debt</th>
+                    </tr>
+                </thead>
+                <tbody id="summaryBody"></tbody>
+            </table>
+
+            <div id="engagementSection" class="no-print choice-card" style="margin-top:30px;">
+                <h3>Would you like to attend more such expert sessions for guidance?</h3>
+                <button class="btn-choice" style="background:var(--primary); color:white;"
+                    onclick="handleChoice('yes')">Yes, I'll need help</button>
+                <button class="btn-choice" style="background:#cbd5e1; color:#1e293b;" onclick="handleChoice('no')">No,
+                    I'll do it myself</button>
+            </div>
+
+            <form id="leadForm">
+                <div id="formSection" class="no-print setup-section"
+                    style="display:none; margin-top:20px; border:2px solid var(--secondary);">
+                    <h4>Great! Let's get you registered for future sessions.</h4>
+                    <div class="grid-3">
+                        <input type="text" id="sPhone" placeholder="WhatsApp Number" maxlength="10">
+                        <input type="text" id="sTarget" placeholder="Target Score (e.g. 620/625)"
+                            oninput="validateTarget(this)">
+                        <button type="submit" class="btn-choice" style="background:var(--secondary); color:white;">GET
+                            MY REVISION PLANNER</button>
+                    </div>
+                </div>
+            </form>
+
+            <div id="timetableSection" style="display:none; margin-top:30px;">
+                <h3 style="text-align:center; color:var(--primary);">📅 YOUR COMPLETE REVISION PLAN</h3>
+                <div id="timetableContent"></div>
+                <button class="btn-main no-print" onclick="window.print()"
+                    style="background:var(--green); margin-top:20px;">PRINT MY MASTERPIECE PLAN</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const CORE_DATA = {
+            "Math": ["Arithmetic Progressions", "Triangles", "Pair of Linear Equations", "Circles", "Area Related to Circles", "Coordinate Geometry", "Real Numbers", "Polynomials", "Quadratic Equations", "Introduction to Trigonometry", "Applications of Trigonometry", "Statistics", "Surface Areas & Volumes", "Probability"],
+            "Science": ["Chemical Reactions & Equations", "Acids, Bases & Salts", "Metals & Metals", "Carbon & its Compounds", "Life Processes", "Control & Coordination", "How do Organisms Reproduce?", "Heredity & Evolution", "Light: Reflection & Refraction", "The Human Eye", "Electricity", "Magnetic Effects", "Our Environment"],
+            "Social Science": ["Hist 1: Advent of Europeans", "Hist 2: Extension of British Rule", "Hist 3: Impact of British Rule", "Hist 4: Opposition to British Rule", "Hist 5: Social Reforms", "Hist 6: First War of Independence", "Hist 7: Freedom Movement", "Hist 8: India After Independence", "PolSci 1: Challenges of India & Remedies", "PolSci 2: Foreign Policy", "PolSci 3: Public Administration", "PolSci 4: World Organization", "Soc 1: Stratification", "Soc 2: Work and economic life", "Soc 3: Collective Behaviour and Protests", "Soc 4: Social Challenges", "Geo 1: Geographical Position", "Geo 3: Seasons", "Geo 4: Soils", "Geo 5: Forest", "Geo 6: Water", "Geo 7: Land", "Geo 8: Mineral", "Geo 9: Transport", "Geo 10: Industries", "Geo 11: Disasters", "Econ 1: Economy and Government", "Econ 2: Rural Development", "Econ 3: Public Finance", "Biz 1: Bank Transactions", "Biz 2: Entrepreneurship", "Biz 3: Consumer Education and protection"]
+        };
+
+        let auditGlobal = [];
+        let studentInfo = {};
+
+        function updateSelectColor(el) { el.setAttribute('data-val', el.value); }
+
+        function validateTarget(el) {
+            if (parseInt(el.value) > 625) {
+                alert("Target score cannot exceed 625! Reseting to 625.");
+                el.value = 625;
+            }
+        }
+
+        function refreshRow(checkbox) {
+            const row = checkbox.closest('.chapter-row');
+            const select = row.querySelector('select');
+            if (!checkbox.checked) {
+                select.innerHTML = '<option value="Mastered" selected>🟢 Mastered</option>';
+                row.style.background = "#d1fae5";
+            } else {
+                select.innerHTML = '<option value="Critical">🔴 Critical</option><option value="Practice" selected>🟡 Practice</option>';
+                row.style.background = "transparent";
+            }
+            updateSelectColor(select);
+        }
+
+        function syncLangs() {
+            const area = document.getElementById('langSyllabus');
+            area.innerHTML = "";
+            const inputs = { "L1": 'l1_in', "L2": 'l2_in', "L3": 'l3_in' };
+            Object.keys(inputs).forEach(k => {
+                const val = document.getElementById(inputs[k]).value;
+                if (val.trim()) {
+                    area.innerHTML += `<h4 style="color:var(--secondary);">${k}</h4>`;
+                    val.split(',').forEach(ch => {
+                        const name = ch.trim();
+                        if (name) {
+                            area.innerHTML += `<div class="chapter-row"><input type="checkbox" class="incl-check" checked onclick="refreshRow(this)"><span>${name}</span><select class="sel-rag" data-sub="${k}" data-ch="${name}" onchange="updateSelectColor(this)"><option value="Critical">🔴 Critical</option><option value="Practice" selected>🟡 Practice</option></select></div>`;
+                        }
+                    });
+                }
+            });
+            document.querySelectorAll('.sel-rag').forEach(updateSelectColor);
+        }
+
+        function init() {
+            const diff = Math.ceil((new Date('2026-03-18') - new Date()) / (1000 * 60 * 60 * 24));
+            const display = document.getElementById('daysCount');
+            if (display) display.innerText = diff + " DAYS TO GO";
+
+            const instructionId = "instructionBanner";
+            if (!document.getElementById(instructionId)) {
+                const infoMsg = document.createElement('div');
+                infoMsg.id = instructionId;
+                infoMsg.style = "background:#eff6ff; border:1px solid #3b82f6; padding:15px; border-radius:8px; margin-bottom:20px; color:#1e40af; font-weight:bold;";
+                infoMsg.innerHTML = "📝 IMPORTANT INSTRUCTIONS: <div>1. Uncheck the box if you are 'EXAM READY' (Mastered).</div><div>2. Keep it checked ( CRITICAL / PRACTICE) to plan for Revision.</div>";
+                document.getElementById('langSyllabus').parentElement.prepend(infoMsg);
+            }
+
+            const area = document.getElementById('coreSyllabus');
+            area.innerHTML = "";
+            Object.keys(CORE_DATA).forEach(sub => {
+                area.innerHTML += `<h4 style="color:var(--primary);">${sub}</h4>`;
+                CORE_DATA[sub].forEach(ch => {
+                    area.innerHTML += `<div class="chapter-row"><input type="checkbox" class="incl-check" checked onclick="refreshRow(this)"><span>${ch}</span><select class="sel-rag" data-sub="${sub}" data-ch="${ch}" onchange="updateSelectColor(this)"><option value="Critical">🔴 Critical</option><option value="Practice" selected>🟡 Practice</option></select></div>`;
+                });
+            });
+
+            const todayStr = new Date().toISOString().split('T')[0];
+            document.getElementById('revStart').value = todayStr;
+            document.getElementById('revStart').min = todayStr;
+            document.getElementById('revEnd').max = "2026-03-17";
+            document.querySelectorAll('.sel-rag').forEach(updateSelectColor);
+        }
+
+        function processAudit() {
+            const name = document.getElementById('initName').value;
+            const style = document.getElementById('studyStyle').value;
+            const revStart = new Date(document.getElementById('revStart').value);
+            const revEnd = new Date(document.getElementById('revEnd').value);
+            if (!name) return alert("Please enter your name.");
+
+            let audit = []; let totalDebt = 0;
+            document.querySelectorAll('.chapter-row').forEach(row => {
+                const ch = row.querySelector('span').innerText;
+                const sel = row.querySelector('.sel-rag');
+                const sub = sel.dataset.sub;
+                const status = sel.value;
+                let h = (status === 'Critical') ? 6 : (status === 'Practice' ? 3 : 1);
+                audit.push({ subject: sub, ch: ch, type: status, debt: h });
+                totalDebt += h;
+            });
+
+            let availableDays = 0; let temp = new Date(revStart);
+            while (temp <= revEnd) { if (temp.getDay() !== 0) availableDays++; temp.setDate(temp.getDate() + 1); }
+
+            studentInfo = { name, style, start: revStart, end: revEnd, debt: totalDebt, debtDays: Math.ceil(totalDebt / 6), availableDays };
+            auditGlobal = audit;
+
+            let mHtml = `<div class="mastery-card" style="background:#f0fdf4; border:1px solid #10b981; padding:20px; border-radius:12px;">
+            <h3 style="color:#065f46; margin-top:0;">🌟 Progress Audit for ${name}</h3>
+            <p>You have already Mastered these topics. Great job!</p>
+            <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:10px;">`;
+
+            const mastered = audit.filter(a => a.type === 'Mastered');
+            mastered.forEach(item => {
+                mHtml += `<div style="background:white; padding:10px; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,0.1); border-left:4px solid #10b981;">
+                        <span style="font-weight:bold; color:#059669; display:block; font-size:11px; text-transform:uppercase;">${item.subject}</span>
+                        <span style="font-size:13px; color:#374151;">${item.ch}</span>
+                      </div>`;
+            });
+            mHtml += `</div></div>`;
+            document.getElementById('masteryDisplay').innerHTML = mHtml;
+
+            const isFeasible = studentInfo.debtDays <= availableDays;
+            document.getElementById('feasibilitySection').innerHTML = `<h3 style="color:${isFeasible ? '#059669' : '#dc2626'}">${isFeasible ? 'Enough time to complete revision and secure 95%+ score!' : 'Attention! Debt exceeds available days. Sundays will be used to catch up.'}</h3>`;
+
+            let sHtml = ""; let grouped = {};
+            audit.forEach(a => {
+                if (!grouped[a.subject]) grouped[a.subject] = { Critical: 0, Practice: 0, Mastered: 0, h: 0 };
+                grouped[a.subject][a.type]++; grouped[a.subject].h += a.debt;
+            });
+            Object.keys(grouped).forEach(s => {
+                sHtml += `<tr><td><b>${s}</b></td><td>${grouped[s].Critical}</td><td>${grouped[s].Practice}</td><td>${grouped[s].Mastered}</td><td><b>${grouped[s].h}h</b></td></tr>`;
+            });
+            document.getElementById('summaryBody').innerHTML = sHtml + `<tr><td colspan="4"><b>TOTAL DEBT</b></td><td><b>${totalDebt} hrs</b></td></tr>`;
+
+            document.getElementById('auditPhase').style.display = 'none';
+            document.getElementById('resultArea').style.display = 'block';
+        }
+
+        function handleChoice(val) {
+            document.getElementById('engagementSection').style.display = 'none';
+            if (val === 'yes') document.getElementById('formSection').style.display = 'block';
+            else generatePlan();
+        }
+
+        document.getElementById('leadForm').onsubmit = (e) => {
+            e.preventDefault();
+            const phone = document.getElementById('sPhone').value;
+            const target = parseInt(document.getElementById('sTarget').value);
+            if (!/^[6-9]\d{9}$/.test(phone)) return alert("WhatsApp must be 10 digits.");
+            if (target > 625) return alert("Target score cannot exceed 625.");
+            const fd = new FormData();
+            fd.append("Name", studentInfo.name); fd.append("Phone", phone); fd.append("Target", target);
+            fetch("https://formspree.io/f/xwpgglwp", { method: "POST", body: fd, headers: { 'Accept': 'application/json' } });
+            document.getElementById('formSection').style.display = 'none';
+            generatePlan();
+        };
+
+        function generatePlan() {
+            let pool = {
+                critical: auditGlobal.filter(a => a.type === 'Critical'),
+                practice: auditGlobal.filter(a => a.type === 'Practice'),
+                mastered: auditGlobal.filter(a => a.type === 'Mastered')
+            };
+            let masterCopy = [...auditGlobal];
+            const isEarly = studentInfo.style === "Early Bird";
+            const slots = isEarly ?
+                ["05:00 am - 08:00 am", "05:00 pm - 07:00 pm", "08:00 pm - 09:00 pm"] :
+                ["07:00 am - 08:00 am", "05:00 pm - 07:00 pm", "08:00 pm - 11:00 pm"];
+
+            let html = "";
+            const march12 = new Date('2026-03-12');
+            if (studentInfo.end < march12) {
+                html += `<div style="background:#fff7ed; border:2px solid #ea580c; padding:15px; border-radius:10px; margin-bottom:20px; color:#9a3412;">
+                <b>⚠️ DON'T GET COMPLACENT!</b> You finish your planned debt by ${studentInfo.end.toDateString()}. 
+                Don't stop there. <b>Start a fresh full-syllabus revision</b> from the next day until March 17th to lock in your 95%+!
+            </div>`;
+            }
+
+            html += `<div style="overflow-x:auto;"><table style="width:100%; border-collapse: collapse; margin-top: 10px; font-family: sans-serif; font-size: 13px;">
+                <thead><tr style="background-color: #1e293b; color: white;">
+                <th style="padding: 12px; border: 1px solid #ddd; white-space:nowrap; width:120px;">DATE</th>
+                <th style="padding: 12px; border: 1px solid #ddd;">${isEarly ? 'CRITICAL SLOT<br><small>' + slots[0] + '</small>' : 'RECAP SLOT<br><small>' + slots[0] + '</small>'}</th>
+                <th style="padding: 12px; border: 1px solid #ddd;">PRACTICE SLOT<br><small>${slots[1]}</small></th>
+                <th style="padding: 12px; border: 1px solid #ddd;">${isEarly ? 'RECAP SLOT<br><small>' + slots[2] + '</small>' : 'CRITICAL SLOT<br><small>' + slots[2] + '</small>'}</th>
+                </tr></thead><tbody>`;
+
+            let curr = new Date(studentInfo.start);
+            let history = { crit: null, prac: null };
+            let subOrder = [...new Set(auditGlobal.map(a => a.subject))];
+            let rotIdx = 0; let rowCounter = 0;
+
+            while (curr <= studentInfo.end) {
+                let isSun = curr.getDay() === 0;
+                if (isSun && studentInfo.availableDays >= studentInfo.debtDays) {
+                    curr.setDate(curr.getDate() + 1); continue;
+                }
+
+                let todayCrit = null; let todayPrac = null; let used = new Set();
+
+                if (pool.critical.length > 0) {
+                    for (let i = 0; i < subOrder.length; i++) {
+                        let sub = subOrder[(rotIdx + i) % subOrder.length];
+                        let idx = pool.critical.findIndex(t => t.subject === sub);
+                        if (idx !== -1) {
+                            todayCrit = pool.critical.splice(idx, 1)[0];
+                            rotIdx = (rotIdx + i + 1) % subOrder.length;
+                            break;
+                        }
+                    }
+                    if (!todayCrit) todayCrit = pool.critical.shift();
+                    used.add(todayCrit.subject);
+                } else {
+                    let mItem = masterCopy[rowCounter % masterCopy.length];
+                    todayCrit = { subject: mItem.subject, ch: mItem.ch + " (Deep Dive)" };
+                }
+
+                if (history.crit && !used.has(history.crit.subject)) {
+                    todayPrac = history.crit; used.add(todayPrac.subject);
+                } else if (pool.practice.length > 0) {
+                    let idx = pool.practice.findIndex(t => !used.has(t.subject));
+                    todayPrac = pool.practice.splice(idx === -1 ? 0 : idx, 1)[0];
+                    used.add(todayPrac.subject);
+                } else {
+                    let mItem = masterCopy[(rowCounter + 1) % masterCopy.length];
+                    todayPrac = { subject: mItem.subject, ch: mItem.ch + " (Review)" };
+                }
+
+                let recapText = "";
+                if (history.prac) {
+                    recapText = `<b>${history.prac.subject}:</b> ${history.prac.ch} (30m)`;
+                } else {
+                    let mItem = masterCopy[(rowCounter + 2) % masterCopy.length];
+                    recapText = `<b>${mItem.subject}:</b> ${mItem.ch} (30m)`;
+                }
+
+                let mIdx = pool.mastered.findIndex(t => !used.has(t.subject));
+                if (mIdx !== -1) {
+                    let mItem = pool.mastered.splice(mIdx, 1)[0];
+                    recapText += ` | <b>${mItem.subject}:</b> ${mItem.ch}`;
+                } else {
+                    let mItem = masterCopy[(rowCounter + 3) % masterCopy.length];
+                    recapText += ` | <b>${mItem.subject}:</b> ${mItem.ch}`;
+                }
+
+                let bgColor = (rowCounter % 2 === 0) ? "#ffffff" : "#f8fafc";
+                let dateStr = curr.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short' });
+
+                let critContent = `<b>${todayCrit.subject}:</b> ${todayCrit.ch}`;
+                let pracContent = `<b>${todayPrac.subject}:</b> ${todayPrac.ch}`;
+
+                html += `<tr style="background-color: ${bgColor};">
+                <td style="padding: 10px; border: 1px solid #cbd5e1; font-weight: bold; white-space:nowrap;">${dateStr}${isSun ? '<br><span style="color:red; font-size:10px;">SUN CLASS</span>' : ''}</td>
+                <td style="padding: 10px; border: 1px solid #cbd5e1;">${isEarly ? critContent : recapText}</td>
+                <td style="padding: 10px; border: 1px solid #cbd5e1;">${pracContent}</td>
+                <td style="padding: 10px; border: 1px solid #cbd5e1;">${isEarly ? recapText : critContent}</td>
+            </tr>`;
+
+                history = { crit: todayCrit, prac: todayPrac };
+                curr.setDate(curr.getDate() + 1);
+                rowCounter++;
+            }
+            html += `</tbody></table></div>`;
+            document.getElementById('timetableContent').innerHTML = html;
+            document.getElementById('timetableSection').style.display = 'block';
+        }
+
+        init();
+    </script>
 </body>
 
 </html>
